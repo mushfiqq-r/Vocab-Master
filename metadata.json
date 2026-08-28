@@ -1,0 +1,6 @@
+{
+  "name": "VocabMaster",
+  "description": "Offline Spaced Repetition vocabulary learning app for Barron's GRE 333, Word Smart 1, and Word Smart 2 with precise Bangla glosses, nuance shifts, and SM-2 retention engine.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

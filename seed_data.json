@@ -1,0 +1,121 @@
+[
+  {
+    "term": "Abate",
+    "part_of_speech": "verb",
+    "bangla_meaning": "কমে যাওয়া বা হ্রাস পাওয়া",
+    "primary_meaning": "To become less intense, severe, or widespread.",
+    "example_sentence": "After raging for three continuous days, the tropical storm finally began to abate.",
+    "precise_meaning": "Abate implies a natural diminution or gradual subsidence in violence, intensity, or physical force (negative/neutral). Formal register, from Old French abattre (to beat down). Unlike mere 'stop', abate captures the progressive dying down of a forceful phenomenon.",
+    "synonyms": [
+      { "word": "Subside", "explanation": "Emphasizes settling downward or returning to a calm baseline, often used for floods or bodily swelling." },
+      { "word": "Diminish", "explanation": "More general and quantitative, focusing on size or numerical quantity rather than violent intensity." },
+      { "word": "Wane", "explanation": "Poetic/literary; implies a cyclical, gradual decline like the phases of the moon." },
+      { "word": "Escalate", "explanation": "Trap Word (Antonym): Means to intensify or spike rapidly, directly opposite to calming or abating.", "isTrapWord": true }
+    ],
+    "memory_hook": "Think 'A-BATE' -> The storm took a 'BITE' out of its fury and calmed down.",
+    "difficulty_tier": 1,
+    "book_ids": ["gre_333", "ws1"]
+  },
+  {
+    "term": "Aberrant",
+    "part_of_speech": "adjective",
+    "bangla_meaning": "স্বাভাবিক বা রীতিবিরুদ্ধ / বিপথগামী",
+    "primary_meaning": "Departing from an accepted or normal standard.",
+    "example_sentence": "The scientist discarded the aberrant test results that deviated sharply from established physiological norms.",
+    "precise_meaning": "Aberrant denotes a temporary or structural deviation from natural laws, moral baselines, or statistical regularity (neutral to negative). Latin aberrare (to wander off). Distinguishes from eccentric by implying an anomaly or defect rather than charming oddity.",
+    "synonyms": [
+      { "word": "Atypical", "explanation": "Purely statistical and non-judgmental, lacking any implication of erratic behavior or defect." },
+      { "word": "Anomalous", "explanation": "Emphasizes inconsistency with a theoretical framework or classification scheme." },
+      { "word": "Deviant", "explanation": "Carries heavy moral, social, or criminal culpability compared to scientific irregularity." },
+      { "word": "Congruous", "explanation": "Trap Word (Antonym): Means in perfect agreement, harmony, and standard conformity.", "isTrapWord": true }
+    ],
+    "memory_hook": "Think 'A-BEAR-IN-ANT-COLONY' -> A bear in an ant hill is wildly aberrant behavior!",
+    "difficulty_tier": 2,
+    "book_ids": ["gre_333", "ws1"]
+  },
+  {
+    "term": "Abeyance",
+    "part_of_speech": "noun",
+    "bangla_meaning": "সাময়িক স্থগিতাবস্থা",
+    "primary_meaning": "A state of temporary disuse or suspension.",
+    "example_sentence": "Hostile corporate takeover plans were held in abeyance pending regulatory antitrust clearance.",
+    "precise_meaning": "Abeyance denotes a legal or formal suspension where rights or actions are held in waiting, awaiting a future trigger (neutral). Anglo-Norman abeiance (open mouth / eager expectation). It differs from permanent termination; it inherently preserves future revival.",
+    "synonyms": [
+      { "word": "Suspension", "explanation": "More active and procedural; implies a direct disciplinary or mechanical halt." },
+      { "word": "Moratorium", "explanation": "A formal, agreed-upon public freeze or delay, usually enacted by government or institutional authority." },
+      { "word": "Dormancy", "explanation": "Biological or natural slumber rather than legal or procedural postponement." },
+      { "word": "Resumption", "explanation": "Trap Word (Antonym): The active recommencement of an activity that was previously paused.", "isTrapWord": true }
+    ],
+    "memory_hook": "Think 'At-bay-once' -> Keep the project at bay for once until approved.",
+    "difficulty_tier": 2,
+    "book_ids": ["gre_333", "ws2"]
+  },
+  {
+    "term": "Alacrity",
+    "part_of_speech": "noun",
+    "bangla_meaning": "উচ্ছ্বসিত তৎপরতা ও আগ্রহ",
+    "primary_meaning": "Brisk and cheerful readiness to act.",
+    "example_sentence": "Eager to make a great impression, the intern accepted the challenging assignment with alacrity.",
+    "precise_meaning": "Alacrity combines both rapid physical promptness and genuine enthusiastic willingness (positive). Latin alacer (lively, brisk). Differs from speed or haste because it mandates a cheerful, cooperative mindset.",
+    "synonyms": [
+      { "word": "Eagerness", "explanation": "Focuses on the internal desire or craving, regardless of whether swift physical action follows." },
+      { "word": "Promptness", "explanation": "Emphasizes punctuality and rapid timing without guaranteeing a cheerful demeanor." },
+      { "word": "Zeal", "explanation": "Passionate, intense dedication that may border on fanatical devotion." },
+      { "word": "Lethargy", "explanation": "Trap Word (Antonym): Heavy sluggishness, apathy, and complete lack of energy to move.", "isTrapWord": true }
+    ],
+    "memory_hook": "Think 'Electricity' -> Moving with energetic, joyful alacrity like an electric spark!",
+    "difficulty_tier": 1,
+    "book_ids": ["gre_333", "ws1"]
+  },
+  {
+    "term": "Cogent",
+    "part_of_speech": "adjective",
+    "bangla_meaning": "অকাট্য, যুক্তিযুক্ত ও জোরালো",
+    "primary_meaning": "Clear, logical, and convincing.",
+    "example_sentence": "The attorney presented a cogent closing argument that persuaded the skeptical jury.",
+    "precise_meaning": "Cogent characterizes an argument, thesis, or deduction possessing such compelling logical coherence, relevance, and factual weight that resistance is overcome (intellectual/positive). Latin cogere (to drive together/compel).",
+    "synonyms": [
+      { "word": "Compelling", "explanation": "Captures attention and evokes strong belief through emotional or narrative power." },
+      { "word": "Persuasive", "explanation": "Successfully convinces an audience, perhaps through rhetorical charm rather than pure logic." },
+      { "word": "Lucid", "explanation": "Clear and easily understood without necessarily being forceful or definitive." },
+      { "word": "Specious", "explanation": "Trap Word (Antonym): Superficially plausible and attractive but fundamentally false and invalid.", "isTrapWord": true }
+    ],
+    "memory_hook": "Think 'COG in the wheel' -> Every gear of the argument meshes perfectly with clear logic.",
+    "difficulty_tier": 1,
+    "book_ids": ["gre_333", "ws1"]
+  },
+  {
+    "term": "Laconic",
+    "part_of_speech": "adjective",
+    "bangla_meaning": "অল্পভাষী, সংক্ষিপ্ত ও অর্থপূর্ণ",
+    "primary_meaning": "Using very few words in speech or writing; terse.",
+    "example_sentence": "The hero replied with a laconic 'No', ending the lengthy diplomatic negotiation instantly.",
+    "precise_meaning": "Laconic stems from ancient Laconia (Sparta), whose citizens were renowned for answering in crisp, razor-sharp monosyllables packed with pithy punch (concise/stoic). Unlike rude, laconic speech is pregnant with meaning.",
+    "synonyms": [
+      { "word": "Terse", "explanation": "Sparing of words, but can come across as abrupt, brusque, or irritated." },
+      { "word": "Pithy", "explanation": "Brief, forceful, and packed with memorable philosophical wisdom." },
+      { "word": "Concise", "explanation": "Efficiently covers all necessary information without any filler words." },
+      { "word": "Loquacious", "explanation": "Trap Word (Antonym): Excessively talkative and fond of fluent, nonstop speaking.", "isTrapWord": true }
+    ],
+    "memory_hook": "Think 'LACK-WORDS' -> Laconic speakers lack words because one word is enough!",
+    "difficulty_tier": 1,
+    "book_ids": ["gre_333", "ws1"]
+  },
+  {
+    "term": "Pragmatic",
+    "part_of_speech": "adjective",
+    "bangla_meaning": "বাস্তবধর্মী, বাস্তববাদী ও প্রয়োগিক",
+    "primary_meaning": "Dealing with things sensibly and realistically in a way that is based on practical rather than theoretical considerations.",
+    "example_sentence": "A pragmatic negotiator focuses on workable compromise rather than rigid ideological purity.",
+    "precise_meaning": "Pragmatic characterizes decisions guided by tangible real-world outcomes, empirical efficacy, and practical sense rather than abstract dogma (grounded/positive). Greek pragma (deed/action).",
+    "synonyms": [
+      { "word": "Practical", "explanation": "Everyday term for hands-on, sensible, and useful tools or solutions." },
+      { "word": "Utilitarian", "explanation": "Designed purely for utility and functional use without aesthetic beauty." },
+      { "word": "Hardheaded", "explanation": "Tough, realistic, and unsentimental in business negotiations." },
+      { "word": "Quixotic", "explanation": "Trap Word (Antonym): Foolishly idealistic, impractical, and chasing impossible romantic dreams.", "isTrapWord": true }
+    ],
+    "memory_hook": "Think 'PRACTICE-MAGIC' -> Solving problems through practical action in the real world.",
+    "difficulty_tier": 1,
+    "book_ids": ["gre_333", "ws1"]
+  }
+]
