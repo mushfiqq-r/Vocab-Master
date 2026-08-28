@@ -14,6 +14,8 @@ import com.example.data.model.WordWithReview
 import com.example.data.repository.VocabRepository
 import com.example.data.util.QuizGenerator
 import com.example.data.util.SM2Algorithm
+import com.example.ui.theme.AccentColor
+import com.example.ui.theme.AppThemeMode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -33,6 +35,11 @@ sealed class ScreenTab(val route: String, val title: String) {
     object Progress : ScreenTab("progress", "Progress")
 }
 
+enum class SettingsTab(val title: String) {
+    GENERAL("Preferences"),
+    BACKUP("Backup & Restore")
+}
+
 data class StudySessionState(
     val wordsQueue: List<WordWithReview> = emptyList(),
     val currentIndex: Int = 0,
@@ -47,6 +54,54 @@ data class StudySessionState(
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = VocabRepository.getInstance(application)
+    private val prefs = application.getSharedPreferences("vocab_tutor_prefs", Context.MODE_PRIVATE)
+
+    private val _themeMode = MutableStateFlow(
+        try {
+            AppThemeMode.valueOf(prefs.getString("theme_mode", AppThemeMode.SYSTEM.name) ?: AppThemeMode.SYSTEM.name)
+        } catch (e: Exception) {
+            AppThemeMode.SYSTEM
+        }
+    )
+    val themeMode: StateFlow<AppThemeMode> = _themeMode.asStateFlow()
+
+    private val _accentColor = MutableStateFlow(
+        try {
+            AccentColor.valueOf(prefs.getString("accent_color", AccentColor.INDIGO.name) ?: AccentColor.INDIGO.name)
+        } catch (e: Exception) {
+            AccentColor.INDIGO
+        }
+    )
+    val accentColor: StateFlow<AccentColor> = _accentColor.asStateFlow()
+
+    private val _showSettingsDialog = MutableStateFlow(false)
+    val showSettingsDialog: StateFlow<Boolean> = _showSettingsDialog.asStateFlow()
+
+    private val _settingsTab = MutableStateFlow(SettingsTab.GENERAL)
+    val settingsTab: StateFlow<SettingsTab> = _settingsTab.asStateFlow()
+
+    fun setThemeMode(mode: AppThemeMode) {
+        _themeMode.value = mode
+        prefs.edit().putString("theme_mode", mode.name).apply()
+    }
+
+    fun setAccentColor(accent: AccentColor) {
+        _accentColor.value = accent
+        prefs.edit().putString("accent_color", accent.name).apply()
+    }
+
+    fun openSettings(tab: SettingsTab = SettingsTab.GENERAL) {
+        _settingsTab.value = tab
+        _showSettingsDialog.value = true
+    }
+
+    fun setSettingsTab(tab: SettingsTab) {
+        _settingsTab.value = tab
+    }
+
+    fun closeSettings() {
+        _showSettingsDialog.value = false
+    }
 
     private val _currentTab = MutableStateFlow<ScreenTab>(ScreenTab.Study)
     val currentTab: StateFlow<ScreenTab> = _currentTab.asStateFlow()

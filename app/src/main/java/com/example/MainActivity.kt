@@ -23,6 +23,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.ui.components.QuickSearchDialog
+import com.example.ui.components.SettingsDialog
 import com.example.ui.components.StreakDetailDialog
 import com.example.ui.components.WordDetailBottomSheet
 import com.example.ui.screens.LibraryScreen
@@ -31,7 +33,7 @@ import com.example.ui.screens.QuizScreen
 import com.example.ui.screens.StudyScreen
 import com.example.ui.screens.TutorScreen
 import com.example.ui.theme.AmberAccent
-import com.example.ui.theme.VocabMasterTheme
+import com.example.ui.theme.VocabTutorTheme
 import com.example.ui.viewmodel.MainViewModel
 import com.example.ui.viewmodel.ScreenTab
 
@@ -43,7 +45,13 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            VocabMasterTheme {
+            val themeMode by viewModel.themeMode.collectAsState()
+            val accentColor by viewModel.accentColor.collectAsState()
+
+            VocabTutorTheme(
+                themeMode = themeMode,
+                accentColor = accentColor
+            ) {
                 val currentTab by viewModel.currentTab.collectAsState()
                 val selectedWord by viewModel.selectedWordDetail.collectAsState()
                 val stats by viewModel.userStats.collectAsState()
@@ -67,13 +75,53 @@ class MainActivity : ComponentActivity() {
                                         tint = MaterialTheme.colorScheme.primary
                                     )
                                     Text(
-                                        text = "VocabMaster",
+                                        text = "VocabTutor",
                                         fontWeight = FontWeight.Bold,
                                         style = MaterialTheme.typography.titleLarge
                                     )
                                 }
                             },
                             actions = {
+                                // Fast Search Button
+                                FilledTonalIconButton(
+                                    onClick = { viewModel.openQuickSearch() },
+                                    modifier = Modifier
+                                        .size(38.dp)
+                                        .testTag("top_bar_search_button"),
+                                    colors = IconButtonDefaults.filledTonalIconButtonColors(
+                                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                                    )
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Search,
+                                        contentDescription = "Search Words",
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.width(6.dp))
+
+                                // Settings & Themes Button
+                                FilledTonalIconButton(
+                                    onClick = { viewModel.openSettings() },
+                                    modifier = Modifier
+                                        .size(38.dp)
+                                        .testTag("top_bar_settings_button"),
+                                    colors = IconButtonDefaults.filledTonalIconButtonColors(
+                                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                                    )
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Settings,
+                                        contentDescription = "Settings and Themes",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.width(6.dp))
+
                                 // Streak Badge in Top Bar
                                 Surface(
                                     color = AmberAccent.copy(alpha = 0.15f),
@@ -233,6 +281,27 @@ class MainActivity : ComponentActivity() {
                                 onStartStudy = {
                                     viewModel.setTab(ScreenTab.Study)
                                 }
+                            )
+                        }
+
+                        // Fast Search Dialog Modal
+                        val showQuickSearch by viewModel.showQuickSearchDialog.collectAsState()
+                        if (showQuickSearch) {
+                            QuickSearchDialog(
+                                viewModel = viewModel,
+                                onDismiss = { viewModel.closeQuickSearch() },
+                                onWordSelect = { word ->
+                                    viewModel.selectWordDetail(word)
+                                }
+                            )
+                        }
+
+                        // Dedicated Settings & Backup Window Modal
+                        val showSettings by viewModel.showSettingsDialog.collectAsState()
+                        if (showSettings) {
+                            SettingsDialog(
+                                viewModel = viewModel,
+                                onDismiss = { viewModel.closeSettings() }
                             )
                         }
                     }
