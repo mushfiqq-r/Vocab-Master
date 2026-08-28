@@ -9,6 +9,7 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -22,6 +23,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.ui.components.StreakDetailDialog
 import com.example.ui.components.WordDetailBottomSheet
 import com.example.ui.screens.LibraryScreen
 import com.example.ui.screens.ProgressScreen
@@ -76,7 +78,10 @@ class MainActivity : ComponentActivity() {
                                 Surface(
                                     color = AmberAccent.copy(alpha = 0.15f),
                                     shape = RoundedCornerShape(12.dp),
-                                    modifier = Modifier.padding(end = 12.dp)
+                                    modifier = Modifier
+                                        .padding(end = 12.dp)
+                                        .clickable { viewModel.openStreakDetailDialog() }
+                                        .testTag("top_bar_streak_badge")
                                 ) {
                                     Row(
                                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
@@ -218,6 +223,18 @@ class MainActivity : ComponentActivity() {
                             },
                             onDismiss = { viewModel.selectWordDetail(null) }
                         )
+
+                        // Learning Streak Interactive Modal Dialog
+                        val showStreakDialog by viewModel.showStreakDetailDialog.collectAsState()
+                        if (showStreakDialog) {
+                            StreakDetailDialog(
+                                viewModel = viewModel,
+                                onDismiss = { viewModel.closeStreakDetailDialog() },
+                                onStartStudy = {
+                                    viewModel.setTab(ScreenTab.Study)
+                                }
+                            )
+                        }
                     }
                 }
             }

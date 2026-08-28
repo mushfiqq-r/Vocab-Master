@@ -43,6 +43,25 @@ data class UserStatsEntity(
     val lastActiveDate: Long = 0L
 )
 
+@Entity(tableName = "daily_activity")
+data class DailyActivityEntity(
+    @PrimaryKey
+    val dateString: String, // "yyyy-MM-dd"
+    val wordsReviewed: Int = 0,
+    val quizzesCompleted: Int = 0,
+    val xpEarned: Int = 0,
+    val goalMet: Boolean = false,
+    val timestamp: Long = System.currentTimeMillis()
+)
+
+data class StreakMilestone(
+    val daysRequired: Int,
+    val title: String,
+    val badgeName: String,
+    val bonusXp: Int,
+    val iconDescription: String
+)
+
 data class SynonymShiftItem(
     val word: String,
     val explanation: String,

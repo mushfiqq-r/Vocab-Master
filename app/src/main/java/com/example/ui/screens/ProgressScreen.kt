@@ -44,8 +44,10 @@ import com.example.data.model.WordEntity
 import com.example.data.model.WordWithReview
 import com.example.ui.components.BadgeChip
 import com.example.ui.components.BackupRestoreSection
+import com.example.ui.components.LearningStreakTracker
 import com.example.ui.theme.*
 import com.example.ui.viewmodel.MainViewModel
+import com.example.ui.viewmodel.ScreenTab
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -131,7 +133,10 @@ fun ProgressScreen(
 
                     Surface(
                         color = AmberAccent,
-                        shape = CircleShape
+                        shape = CircleShape,
+                        modifier = Modifier
+                            .clickable { viewModel.openStreakDetailDialog() }
+                            .testTag("progress_header_streak_badge")
                     ) {
                         Row(
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
@@ -188,6 +193,14 @@ fun ProgressScreen(
                 }
             }
         }
+
+        // -------------------------------------------------------------
+        // 2. LEARNING STREAK TRACKER (GAMIFIED CALENDAR & MILESTONES)
+        // -------------------------------------------------------------
+        LearningStreakTracker(
+            viewModel = viewModel,
+            onStartStudyClick = { viewModel.setTab(ScreenTab.Study) }
+        )
 
         // -------------------------------------------------------------
         // 2. D3 / RECHARTS STYLE INTERACTIVE DONUT CHART

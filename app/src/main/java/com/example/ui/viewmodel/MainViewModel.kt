@@ -60,6 +60,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _selectedStatusFilter = MutableStateFlow("ALL") // "ALL", "new", "learning", "mastered"
     val selectedStatusFilter: StateFlow<String> = _selectedStatusFilter.asStateFlow()
 
+    private val _selectedTierFilter = MutableStateFlow(0) // 0: ALL, 1: Core, 2: Moderate, 3: Advanced
+    val selectedTierFilter: StateFlow<Int> = _selectedTierFilter.asStateFlow()
+
+    private val _selectedSortOrder = MutableStateFlow("A_TO_Z") // "A_TO_Z", "Z_TO_A", "DIFFICULTY", "MASTERY"
+    val selectedSortOrder: StateFlow<String> = _selectedSortOrder.asStateFlow()
+
+    private val _showQuickSearchDialog = MutableStateFlow(false)
+    val showQuickSearchDialog: StateFlow<Boolean> = _showQuickSearchDialog.asStateFlow()
+
+    fun openQuickSearch() {
+        _showQuickSearchDialog.value = true
+    }
+
+    fun closeQuickSearch() {
+        _showQuickSearchDialog.value = false
+    }
+
     private val _selectedWordDetail = MutableStateFlow<WordEntity?>(null)
     val selectedWordDetail: StateFlow<WordEntity?> = _selectedWordDetail.asStateFlow()
 
@@ -85,27 +102,92 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val upcomingReviews: StateFlow<List<ReviewStateEntity>> = repository.getUpcomingReviewSchedule()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    val recentDailyActivity: StateFlow<List<com.example.data.model.DailyActivityEntity>> = repository.getRecentDailyActivity(14)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val completedDaysCount: StateFlow<Int> = repository.getCompletedDaysCount()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+    private val _showStreakDetailDialog = MutableStateFlow(false)
+    val showStreakDetailDialog: StateFlow<Boolean> = _showStreakDetailDialog.asStateFlow()
+
+    fun openStreakDetailDialog() {
+        _showStreakDetailDialog.value = true
+    }
+
+    fun closeStreakDetailDialog() {
+        _showStreakDetailDialog.value = false
+    }
+
+    val streakMilestones = listOf(
+        com.example.data.model.StreakMilestone(3, "Spark Initiate", "Bronze Flame", 50, "3-Day Learning Consistency"),
+        com.example.data.model.StreakMilestone(7, "Weekly Flame", "Silver Torch", 150, "7-Day Consistent Scholar"),
+        com.example.data.model.StreakMilestone(14, "Fortnight Inferno", "Gold Blaze", 300, "14-Day Memory Dedication"),
+        com.example.data.model.StreakMilestone(30, "Monthly Master", "Diamond Sun", 750, "30-Day Vocabulary Mastery"),
+        com.example.data.model.StreakMilestone(60, "Iron Will", "Obsidian Phoenix", 1500, "60-Day Habit Champion"),
+        com.example.data.model.StreakMilestone(100, "Century Legend", "Celestial Nova", 3000, "100-Day GRE Polymath")
+    )
+
     val wordsWithReviews: StateFlow<List<WordWithReview>> = repository.getAllWordsWithReviews()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    private data class LibraryFilterCriteria(
+        val query: String,
+        val book: String,
+        val status: String,
+        val tier: Int,
+        val sortOrder: String
+    )
+
+    private val filterCriteria = combine(
+        combine(_searchQuery, _selectedBookFilter) { q, b -> Pair(q, b) },
+        combine(_selectedStatusFilter, _selectedTierFilter, _selectedSortOrder) { s, t, o -> Triple(s, t, o) }
+    ) { pair, triple ->
+        LibraryFilterCriteria(
+            query = pair.first,
+            book = pair.second,
+            status = triple.first,
+            tier = triple.second,
+            sortOrder = triple.third
+        )
+    }
+
     val filteredLibraryWords: StateFlow<List<WordWithReview>> = combine(
         wordsWithReviews,
-        _searchQuery,
-        _selectedBookFilter,
-        _selectedStatusFilter
-    ) { list, query, book, status ->
-        list.filter { item ->
-            val matchesQuery = query.isBlank() ||
-                    item.word.term.contains(query, ignoreCase = true) ||
-                    item.word.banglaMeaning.contains(query, ignoreCase = true) ||
-                    item.word.primaryMeaning.contains(query, ignoreCase = true)
+        filterCriteria
+    ) { list, criteria ->
+        val filtered = list.filter { item ->
+            val q = criteria.query.trim()
+            val matchesQuery = q.isBlank() ||
+                    item.word.term.contains(q, ignoreCase = true) ||
+                    item.word.banglaMeaning.contains(q, ignoreCase = true) ||
+                    item.word.primaryMeaning.contains(q, ignoreCase = true) ||
+                    item.word.preciseMeaning.contains(q, ignoreCase = true) ||
+                    item.word.memoryHook.contains(q, ignoreCase = true)
 
-            val matchesBook = book == "ALL" || item.word.bookIds.contains(book)
+            val matchesBook = criteria.book == "ALL" || item.word.bookIds.contains(criteria.book)
 
             val itemStatus = item.review?.status ?: "new"
-            val matchesStatus = status == "ALL" || itemStatus.equals(status, ignoreCase = true)
+            val matchesStatus = criteria.status == "ALL" || itemStatus.equals(criteria.status, ignoreCase = true)
 
-            matchesQuery && matchesBook && matchesStatus
+            val matchesTier = criteria.tier == 0 || item.word.difficultyTier == criteria.tier
+
+            matchesQuery && matchesBook && matchesStatus && matchesTier
+        }
+
+        when (criteria.sortOrder) {
+            "Z_TO_A" -> filtered.sortedByDescending { it.word.term.lowercase() }
+            "DIFFICULTY" -> filtered.sortedWith(compareBy({ it.word.difficultyTier }, { it.word.term }))
+            "MASTERY" -> filtered.sortedWith(
+                compareByDescending<WordWithReview> {
+                    when (it.review?.status) {
+                        "mastered" -> 3
+                        "learning" -> 2
+                        else -> 1
+                    }
+                }.thenBy { it.word.term }
+            )
+            else -> filtered.sortedBy { it.word.term.lowercase() }
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -131,6 +213,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setStatusFilter(status: String) {
         _selectedStatusFilter.value = status
+    }
+
+    fun setTierFilter(tier: Int) {
+        _selectedTierFilter.value = tier
+    }
+
+    fun setSortOrder(order: String) {
+        _selectedSortOrder.value = order
     }
 
     fun selectWordDetail(word: WordEntity?) {

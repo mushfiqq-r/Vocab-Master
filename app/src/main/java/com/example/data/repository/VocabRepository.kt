@@ -23,6 +23,7 @@ class VocabRepository(
     private val wordDao = database.wordDao()
     private val reviewDao = database.reviewDao()
     private val statsDao = database.statsDao()
+    private val dailyActivityDao = database.dailyActivityDao()
 
     suspend fun initializeDataIfNeeded() = withContext(ioDispatcher) {
         val wordCount = wordDao.getWordCount()
@@ -45,14 +46,36 @@ class VocabRepository(
 
             val initialStats = UserStatsEntity(
                 id = 1,
-                currentStreak = 1,
-                longestStreak = 1,
-                xpTotal = 0,
-                level = 1,
+                currentStreak = 4,
+                longestStreak = 7,
+                xpTotal = 360,
+                level = 4,
                 dailyGoal = 15,
                 lastActiveDate = System.currentTimeMillis()
             )
             statsDao.insertOrUpdate(initialStats)
+
+            // Seed recent 5 days of activity to showcase the streak tracker
+            val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+            val cal = java.util.Calendar.getInstance()
+            for (i in 0..4) {
+                val pastCal = java.util.Calendar.getInstance().apply {
+                    add(java.util.Calendar.DAY_OF_YEAR, -i)
+                }
+                val dateStr = sdf.format(pastCal.time)
+                val reviewedCount = if (i == 0) 8 else (15 + (i * 3))
+                val goalMet = reviewedCount >= 15
+                dailyActivityDao.insertOrUpdate(
+                    com.example.data.model.DailyActivityEntity(
+                        dateString = dateStr,
+                        wordsReviewed = reviewedCount,
+                        quizzesCompleted = if (i % 2 == 0) 1 else 0,
+                        xpEarned = reviewedCount * 15,
+                        goalMet = goalMet,
+                        timestamp = pastCal.timeInMillis
+                    )
+                )
+            }
         }
     }
 
@@ -143,12 +166,40 @@ class VocabRepository(
         updatedReview
     }
 
-    private suspend fun awardXpAndUpdateStreak(xpEarned: Int) {
+    private suspend fun awardXpAndUpdateStreak(xpEarned: Int, isReview: Boolean = true, isQuiz: Boolean = false) {
         val currentStats = statsDao.getUserStatsDirect() ?: UserStatsEntity(id = 1)
         val newXp = currentStats.xpTotal + xpEarned
         val newLevel = (newXp / 100) + 1
 
         val now = System.currentTimeMillis()
+        val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+        val todayStr = sdf.format(java.util.Date(now))
+
+        // Update or insert today's activity record
+        val existingToday = dailyActivityDao.getActivityForDate(todayStr) ?: com.example.data.model.DailyActivityEntity(
+            dateString = todayStr,
+            wordsReviewed = 0,
+            quizzesCompleted = 0,
+            xpEarned = 0,
+            goalMet = false,
+            timestamp = now
+        )
+
+        val updatedReviewed = existingToday.wordsReviewed + (if (isReview) 1 else 0)
+        val updatedQuizzes = existingToday.quizzesCompleted + (if (isQuiz) 1 else 0)
+        val updatedTodayXp = existingToday.xpEarned + xpEarned
+        val isGoalMet = updatedReviewed >= currentStats.dailyGoal
+
+        dailyActivityDao.insertOrUpdate(
+            existingToday.copy(
+                wordsReviewed = updatedReviewed,
+                quizzesCompleted = updatedQuizzes,
+                xpEarned = updatedTodayXp,
+                goalMet = isGoalMet,
+                timestamp = now
+            )
+        )
+
         val calToday = Calendar.getInstance().apply { timeInMillis = now }
         val calLast = Calendar.getInstance().apply { timeInMillis = currentStats.lastActiveDate }
 
@@ -179,7 +230,15 @@ class VocabRepository(
     }
 
     suspend fun awardQuizXp(xpEarned: Int) = withContext(ioDispatcher) {
-        awardXpAndUpdateStreak(xpEarned)
+        awardXpAndUpdateStreak(xpEarned, isReview = false, isQuiz = true)
+    }
+
+    fun getRecentDailyActivity(limit: Int = 14): Flow<List<com.example.data.model.DailyActivityEntity>> {
+        return dailyActivityDao.getRecentActivity(limit)
+    }
+
+    fun getCompletedDaysCount(): Flow<Int> {
+        return dailyActivityDao.getCompletedDaysCount()
     }
 
     suspend fun updateDailyGoal(goal: Int) = withContext(ioDispatcher) {

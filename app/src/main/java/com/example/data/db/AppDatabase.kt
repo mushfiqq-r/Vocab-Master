@@ -4,9 +4,11 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import com.example.data.dao.DailyActivityDao
 import com.example.data.dao.ReviewDao
 import com.example.data.dao.StatsDao
 import com.example.data.dao.WordDao
+import com.example.data.model.DailyActivityEntity
 import com.example.data.model.ReviewStateEntity
 import com.example.data.model.UserStatsEntity
 import com.example.data.model.WordEntity
@@ -15,15 +17,17 @@ import com.example.data.model.WordEntity
     entities = [
         WordEntity::class,
         ReviewStateEntity::class,
-        UserStatsEntity::class
+        UserStatsEntity::class,
+        DailyActivityEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun wordDao(): WordDao
     abstract fun reviewDao(): ReviewDao
     abstract fun statsDao(): StatsDao
+    abstract fun dailyActivityDao(): DailyActivityDao
 
     companion object {
         @Volatile
@@ -35,7 +39,9 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "vocabmaster_database.db"
-                ).build()
+                )
+                    .fallbackToDestructiveMigration()
+                    .build()
                 INSTANCE = instance
                 instance
             }

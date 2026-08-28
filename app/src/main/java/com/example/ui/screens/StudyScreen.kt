@@ -85,7 +85,8 @@ fun StudyScreen(
                 Surface(
                     color = AmberAccent.copy(alpha = 0.15f),
                     shape = RoundedCornerShape(16.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, AmberAccent.copy(alpha = 0.4f))
+                    border = androidx.compose.foundation.BorderStroke(1.dp, AmberAccent.copy(alpha = 0.4f)),
+                    modifier = Modifier.clickable { viewModel.openStreakDetailDialog() }
                 ) {
                     Row(
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),

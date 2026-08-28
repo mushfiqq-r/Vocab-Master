@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
+import com.example.data.model.DailyActivityEntity
 import com.example.data.model.ReviewStateEntity
 import com.example.data.model.UserStatsEntity
 import com.example.data.model.WordEntity
@@ -81,3 +82,25 @@ interface StatsDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertOrUpdate(stats: UserStatsEntity)
 }
+
+@Dao
+interface DailyActivityDao {
+    @Query("SELECT * FROM daily_activity ORDER BY dateString DESC")
+    fun getAllActivity(): Flow<List<DailyActivityEntity>>
+
+    @Query("SELECT * FROM daily_activity WHERE dateString = :dateString LIMIT 1")
+    suspend fun getActivityForDate(dateString: String): DailyActivityEntity?
+
+    @Query("SELECT * FROM daily_activity ORDER BY dateString DESC LIMIT :limit")
+    fun getRecentActivity(limit: Int): Flow<List<DailyActivityEntity>>
+
+    @Query("SELECT * FROM daily_activity ORDER BY dateString DESC LIMIT :limit")
+    suspend fun getRecentActivityDirect(limit: Int): List<DailyActivityEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertOrUpdate(activity: DailyActivityEntity)
+
+    @Query("SELECT COUNT(*) FROM daily_activity WHERE goalMet = 1")
+    fun getCompletedDaysCount(): Flow<Int>
+}
+
