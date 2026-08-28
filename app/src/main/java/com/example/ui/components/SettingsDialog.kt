@@ -501,7 +501,98 @@ fun GeneralSettingsContent(
         }
 
         // -------------------------------------------------------------
-        // 5. ABOUT VOCABTUTOR
+        // 5. RESET DATA & PROGRESS
+        // -------------------------------------------------------------
+        var showResetConfirm by remember { mutableStateOf(false) }
+
+        if (showResetConfirm) {
+            AlertDialog(
+                onDismissRequest = { showResetConfirm = false },
+                icon = {
+                    Icon(
+                        imageVector = Icons.Default.RestartAlt,
+                        contentDescription = "Reset Progress",
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                },
+                title = {
+                    Text("Reset All Progress to Zero?")
+                },
+                text = {
+                    Text("This will reset all streak days, XP, level, daily activity logs, and return all flashcards to new unlearned status.")
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            viewModel.resetAllProgress()
+                            showResetConfirm = false
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.error
+                        )
+                    ) {
+                        Text("Reset to Zero")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showResetConfirm = false }) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
+
+        Card(
+            shape = RoundedCornerShape(18.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.25f)),
+            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.4f)),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(
+                modifier = Modifier.padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.RestartAlt,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Column {
+                        Text(
+                            text = "Reset All Progress",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "Clear streaks, XP, and word reviews to 0",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                OutlinedButton(
+                    onClick = { showResetConfirm = true },
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    ),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.7f))
+                ) {
+                    Text("Reset")
+                }
+            }
+        }
+
+        // -------------------------------------------------------------
+        // 6. ABOUT VOCABTUTOR
         // -------------------------------------------------------------
         Card(
             shape = RoundedCornerShape(18.dp),

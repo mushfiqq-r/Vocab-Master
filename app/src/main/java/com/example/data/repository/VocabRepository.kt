@@ -46,37 +46,49 @@ class VocabRepository(
 
             val initialStats = UserStatsEntity(
                 id = 1,
-                currentStreak = 4,
-                longestStreak = 7,
-                xpTotal = 360,
-                level = 4,
+                currentStreak = 0,
+                longestStreak = 0,
+                xpTotal = 0,
+                level = 1,
                 dailyGoal = 15,
-                lastActiveDate = System.currentTimeMillis()
+                lastActiveDate = 0L
             )
             statsDao.insertOrUpdate(initialStats)
-
-            // Seed recent 5 days of activity to showcase the streak tracker
-            val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
-            val cal = java.util.Calendar.getInstance()
-            for (i in 0..4) {
-                val pastCal = java.util.Calendar.getInstance().apply {
-                    add(java.util.Calendar.DAY_OF_YEAR, -i)
-                }
-                val dateStr = sdf.format(pastCal.time)
-                val reviewedCount = if (i == 0) 8 else (15 + (i * 3))
-                val goalMet = reviewedCount >= 15
-                dailyActivityDao.insertOrUpdate(
-                    com.example.data.model.DailyActivityEntity(
-                        dateString = dateStr,
-                        wordsReviewed = reviewedCount,
-                        quizzesCompleted = if (i % 2 == 0) 1 else 0,
-                        xpEarned = reviewedCount * 15,
-                        goalMet = goalMet,
-                        timestamp = pastCal.timeInMillis
+        } else {
+            // Clean up any legacy preset seed values from prior developer templates
+            val currentStats = statsDao.getUserStatsDirect()
+            if (currentStats != null && currentStats.currentStreak == 4 && currentStats.xpTotal == 360) {
+                statsDao.insertOrUpdate(
+                    currentStats.copy(
+                        currentStreak = 0,
+                        longestStreak = 0,
+                        xpTotal = 0,
+                        level = 1,
+                        lastActiveDate = 0L
                     )
                 )
+                dailyActivityDao.deleteAllActivity()
+                reviewDao.resetAllReviews(System.currentTimeMillis())
             }
         }
+    }
+
+    suspend fun resetAllUserProgress() = withContext(ioDispatcher) {
+        val now = System.currentTimeMillis()
+        reviewDao.resetAllReviews(now)
+        val currentStats = statsDao.getUserStatsDirect()
+        statsDao.insertOrUpdate(
+            UserStatsEntity(
+                id = 1,
+                currentStreak = 0,
+                longestStreak = 0,
+                xpTotal = 0,
+                level = 1,
+                dailyGoal = currentStats?.dailyGoal ?: 15,
+                lastActiveDate = 0L
+            )
+        )
+        dailyActivityDao.deleteAllActivity()
     }
 
     fun getAllWordsWithReviews(): Flow<List<WordWithReview>> {

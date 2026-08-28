@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -64,6 +65,7 @@ fun ProgressScreen(
     val allWords by viewModel.wordsWithReviews.collectAsState()
     val wordOfTheDay by viewModel.wordOfTheDay.collectAsState()
     val quizState by viewModel.quizState.collectAsState()
+    val dueCountFromDb by viewModel.dueReviewCount.collectAsState()
 
     var showGoalDialog by remember { mutableStateOf(false) }
     var selectedCategory by remember { mutableStateOf(ChartFilterCategory.ALL) }
@@ -71,11 +73,16 @@ fun ProgressScreen(
     val masteredList = remember(allWords) { allWords.filter { it.review?.status == "mastered" } }
     val learningList = remember(allWords) { allWords.filter { it.review?.status == "learning" } }
     val newList = remember(allWords) { allWords.filter { it.review?.status == "new" || it.review == null } }
+    val dueWordsList = remember(allWords) {
+        val now = System.currentTimeMillis()
+        allWords.filter { it.review == null || it.review.status == "new" || it.review.nextReviewDate <= now }
+    }
 
     val masteredCount = masteredList.size
     val learningCount = learningList.size
     val newCount = newList.size
     val totalCount = allWords.size.coerceAtLeast(1)
+    val effectiveDueCount = if (dueCountFromDb > 0) dueCountFromDb else dueWordsList.size
 
     // Book breakdowns
     val greWords = remember(allWords) { allWords.filter { it.word.bookIds.contains("gre_333") } }
@@ -195,7 +202,18 @@ fun ProgressScreen(
         }
 
         // -------------------------------------------------------------
-        // 2. LEARNING STREAK TRACKER (GAMIFIED CALENDAR & MILESTONES)
+        // 2. WORDS TO REVIEW CARD (SM-2 INTERVAL QUEUE)
+        // -------------------------------------------------------------
+        WordsToReviewCard(
+            dueCount = effectiveDueCount,
+            dueWords = dueWordsList,
+            dailyGoal = stats?.dailyGoal ?: 15,
+            onStartReviewClick = { viewModel.setTab(ScreenTab.Study) },
+            onWordClick = onWordClick
+        )
+
+        // -------------------------------------------------------------
+        // 3. LEARNING STREAK TRACKER (GAMIFIED CALENDAR & MILESTONES)
         // -------------------------------------------------------------
         LearningStreakTracker(
             viewModel = viewModel,
@@ -963,6 +981,243 @@ fun TierMetricCard(
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+        }
+    }
+}
+
+// -------------------------------------------------------------
+// WORDS TO REVIEW CARD COMPONENT (SM-2 INTERVAL STATUS)
+// -------------------------------------------------------------
+@Composable
+fun WordsToReviewCard(
+    dueCount: Int,
+    dueWords: List<WordWithReview>,
+    dailyGoal: Int,
+    onStartReviewClick: () -> Unit,
+    onWordClick: (WordEntity) -> Unit
+) {
+    Card(
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        border = CardDefaults.outlinedCardBorder(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag("words_to_review_card"),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            // Header Row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Surface(
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        modifier = Modifier.size(38.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.Schedule,
+                                contentDescription = "Words to Review",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                    }
+                    Column {
+                        Text(
+                            text = "Words to Review",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "SM-2 Spaced Repetition Queue",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = if (dueCount > 0) AmberAccent.copy(alpha = 0.18f) else StatusMastered.copy(alpha = 0.15f)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(6.dp)
+                                .clip(CircleShape)
+                                .background(if (dueCount > 0) AmberAccent else StatusMastered)
+                        )
+                        Text(
+                            text = if (dueCount > 0) "Due Today" else "Up to Date",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = if (dueCount > 0) Color(0xFFD97706) else StatusMastered
+                        )
+                    }
+                }
+            }
+
+            // Prominent Count & SM-2 Context Banner
+            Surface(
+                shape = RoundedCornerShape(14.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(end = 4.dp)
+                    ) {
+                        Text(
+                            text = "$dueCount",
+                            style = MaterialTheme.typography.headlineLarge,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = if (dueCount > 0) MaterialTheme.colorScheme.primary else StatusMastered
+                        )
+                        Text(
+                            text = "DUE TODAY",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.8.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .width(1.dp)
+                            .height(44.dp)
+                            .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
+                    )
+
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        if (dueCount > 0) {
+                            Text(
+                                text = "Spaced Repetition Active",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "These words have reached their calculated SM-2 interval. Reviewing today prevents memory decay.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                lineHeight = 16.sp
+                            )
+                        } else {
+                            Text(
+                                text = "All reviews completed! 🎉",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = StatusMastered
+                            )
+                            Text(
+                                text = "No words overdue for SM-2 repetition today. You can still practice ahead to strengthen memory.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                lineHeight = 16.sp
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Preview List of Due Words (if any)
+            if (dueWords.isNotEmpty()) {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(
+                        text = "Next words in queue:",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        items(dueWords.take(6)) { item ->
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = MaterialTheme.colorScheme.surface,
+                                border = androidx.compose.foundation.BorderStroke(
+                                    1.dp,
+                                    MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)
+                                ),
+                                modifier = Modifier
+                                    .clickable { onWordClick(item.word) }
+                                    .testTag("due_word_chip_${item.word.term}")
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Text(
+                                        text = item.word.term,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                    Text(
+                                        text = item.word.banglaMeaning,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Action Button
+            Button(
+                onClick = onStartReviewClick,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("start_review_session_button"),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Icon(
+                    imageVector = if (dueCount > 0) Icons.Default.PlayArrow else Icons.Default.AutoStories,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = if (dueCount > 0) "Review $dueCount Due Words" else "Start Practice Session",
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
     }
 }

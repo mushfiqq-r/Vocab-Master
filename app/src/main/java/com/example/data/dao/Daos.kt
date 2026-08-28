@@ -69,6 +69,9 @@ interface ReviewDao {
 
     @Query("UPDATE review_states SET easeFactor = 2.5, intervalDays = 0, repetitions = 0, nextReviewDate = :timestamp, lastReviewedDate = 0, status = 'new' WHERE wordId = :wordId")
     suspend fun resetWordProgress(wordId: Long, timestamp: Long)
+
+    @Query("UPDATE review_states SET easeFactor = 2.5, intervalDays = 0, repetitions = 0, nextReviewDate = :timestamp, lastReviewedDate = 0, status = 'new'")
+    suspend fun resetAllReviews(timestamp: Long)
 }
 
 @Dao
@@ -102,5 +105,8 @@ interface DailyActivityDao {
 
     @Query("SELECT COUNT(*) FROM daily_activity WHERE goalMet = 1")
     fun getCompletedDaysCount(): Flow<Int>
+
+    @Query("DELETE FROM daily_activity")
+    suspend fun deleteAllActivity()
 }
 

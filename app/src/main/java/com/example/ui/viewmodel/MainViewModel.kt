@@ -582,4 +582,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             loadLocalBackups(context)
         }
     }
+
+    fun resetAllProgress(onComplete: (() -> Unit)? = null) {
+        viewModelScope.launch {
+            repository.resetAllUserProgress()
+            startNewStudySession()
+            _backupStatusMessage.value = "All statistics and reviews have been reset to zero."
+            onComplete?.invoke()
+        }
+    }
 }
