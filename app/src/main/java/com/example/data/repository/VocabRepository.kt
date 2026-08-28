@@ -178,9 +178,53 @@ class VocabRepository(
         statsDao.insertOrUpdate(updatedStats)
     }
 
+    suspend fun awardQuizXp(xpEarned: Int) = withContext(ioDispatcher) {
+        awardXpAndUpdateStreak(xpEarned)
+    }
+
     suspend fun updateDailyGoal(goal: Int) = withContext(ioDispatcher) {
         val currentStats = statsDao.getUserStatsDirect() ?: UserStatsEntity(id = 1)
         statsDao.insertOrUpdate(currentStats.copy(dailyGoal = goal))
+    }
+
+    suspend fun resetWordProgress(wordId: Long) = withContext(ioDispatcher) {
+        val now = System.currentTimeMillis()
+        reviewDao.resetWordProgress(wordId, now)
+    }
+
+    fun getDueCount(): Flow<Int> {
+        val now = System.currentTimeMillis()
+        return reviewDao.getDueReviewCount(now)
+    }
+
+    fun getAverageEaseFactor(): Flow<Double?> {
+        return reviewDao.getAverageEaseFactor()
+    }
+
+    fun getUpcomingReviewSchedule(limit: Int = 20): Flow<List<ReviewStateEntity>> {
+        return reviewDao.getUpcomingReviewSchedule(limit)
+    }
+
+    suspend fun exportBackupJson(): String = withContext(ioDispatcher) {
+        val stats = statsDao.getUserStatsDirect()
+        val reviews = reviewDao.getAllReviewStatesDirect()
+        com.example.data.util.BackupManager.generateBackupJson(stats, reviews)
+    }
+
+    suspend fun restoreBackupFromJson(jsonString: String): Result<com.example.data.util.BackupData> = withContext(ioDispatcher) {
+        val parseResult = com.example.data.util.BackupManager.parseBackupJson(jsonString)
+        if (parseResult.isFailure) {
+            return@withContext Result.failure(parseResult.exceptionOrNull() ?: Exception("Unknown parse error"))
+        }
+
+        val backupData = parseResult.getOrThrow()
+        // Save stats
+        statsDao.insertOrUpdate(backupData.stats)
+        // Save review states
+        if (backupData.reviewStates.isNotEmpty()) {
+            reviewDao.insertOrUpdateAll(backupData.reviewStates)
+        }
+        Result.success(backupData)
     }
 
     fun getUserStats(): Flow<UserStatsEntity?> = statsDao.getUserStats()

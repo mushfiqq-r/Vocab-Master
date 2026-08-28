@@ -48,7 +48,8 @@ fun StudyScreen(
             newLearned = studyState.newLearnedInSession,
             xpEarned = studyState.xpEarnedInSession,
             streak = stats?.currentStreak ?: 1,
-            onRestart = { viewModel.startNewStudySession() }
+            onRestart = { viewModel.startNewStudySession() },
+            onTakeQuiz = { viewModel.setTab(com.example.ui.viewmodel.ScreenTab.Quiz) }
         )
     } else {
         val currentItem = studyState.wordsQueue.getOrNull(studyState.currentIndex)
@@ -58,7 +59,8 @@ fun StudyScreen(
                 newLearned = studyState.newLearnedInSession,
                 xpEarned = studyState.xpEarnedInSession,
                 streak = stats?.currentStreak ?: 1,
-                onRestart = { viewModel.startNewStudySession() }
+                onRestart = { viewModel.startNewStudySession() },
+                onTakeQuiz = { viewModel.setTab(com.example.ui.viewmodel.ScreenTab.Quiz) }
             )
             return
         }
@@ -321,13 +323,20 @@ fun StudyScreen(
 
             // Grading Buttons (Only visible when flipped)
             if (studyState.isCardFlipped) {
+                val currentReview = currentItem.review ?: com.example.data.model.ReviewStateEntity(wordId = word.id)
+                val againProj = SM2Algorithm.calculateNextReview(currentReview, SM2Algorithm.ReviewGrade.AGAIN)
+                val hardProj = SM2Algorithm.calculateNextReview(currentReview, SM2Algorithm.ReviewGrade.HARD)
+                val goodProj = SM2Algorithm.calculateNextReview(currentReview, SM2Algorithm.ReviewGrade.GOOD)
+                val easyProj = SM2Algorithm.calculateNextReview(currentReview, SM2Algorithm.ReviewGrade.EASY)
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Sm2GradeButton(
                         modifier = Modifier.weight(1f),
                         label = "Again",
+                        interval = "${againProj.intervalDays}d",
                         xp = "+5 XP",
                         color = StatusDanger,
                         onClick = { viewModel.gradeCurrentWord(SM2Algorithm.ReviewGrade.AGAIN) }
@@ -335,6 +344,7 @@ fun StudyScreen(
                     Sm2GradeButton(
                         modifier = Modifier.weight(1f),
                         label = "Hard",
+                        interval = "${hardProj.intervalDays}d",
                         xp = "+15 XP",
                         color = StatusLearning,
                         onClick = { viewModel.gradeCurrentWord(SM2Algorithm.ReviewGrade.HARD) }
@@ -342,6 +352,7 @@ fun StudyScreen(
                     Sm2GradeButton(
                         modifier = Modifier.weight(1f),
                         label = "Good",
+                        interval = "${goodProj.intervalDays}d",
                         xp = "+25 XP",
                         color = BookWs1Color,
                         onClick = { viewModel.gradeCurrentWord(SM2Algorithm.ReviewGrade.GOOD) }
@@ -349,6 +360,7 @@ fun StudyScreen(
                     Sm2GradeButton(
                         modifier = Modifier.weight(1f),
                         label = "Easy",
+                        interval = "${easyProj.intervalDays}d",
                         xp = "+35 XP",
                         color = StatusMastered,
                         onClick = { viewModel.gradeCurrentWord(SM2Algorithm.ReviewGrade.EASY) }
@@ -404,28 +416,40 @@ fun StudyScreen(
 fun Sm2GradeButton(
     modifier: Modifier = Modifier,
     label: String,
+    interval: String,
     xp: String,
     color: Color,
     onClick: () -> Unit
 ) {
     Button(
         onClick = onClick,
-        modifier = modifier.height(52.dp),
+        modifier = modifier.height(56.dp),
         shape = RoundedCornerShape(10.dp),
         colors = ButtonDefaults.buttonColors(containerColor = color),
-        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp)
+        contentPadding = PaddingValues(horizontal = 2.dp, vertical = 2.dp)
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
             Text(
                 text = label,
-                style = MaterialTheme.typography.labelLarge,
+                style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Bold,
                 color = Color.White
             )
             Text(
+                text = interval,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = Color.White.copy(alpha = 0.95f),
+                fontSize = 10.sp
+            )
+            Text(
                 text = xp,
                 style = MaterialTheme.typography.labelSmall,
-                color = Color.White.copy(alpha = 0.85f)
+                color = Color.White.copy(alpha = 0.75f),
+                fontSize = 9.sp
             )
         }
     }
@@ -437,7 +461,8 @@ fun SessionCompletedView(
     newLearned: Int,
     xpEarned: Int,
     streak: Int,
-    onRestart: () -> Unit
+    onRestart: () -> Unit,
+    onTakeQuiz: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -513,6 +538,21 @@ fun SessionCompletedView(
             Icon(imageVector = Icons.Default.Replay, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
             Text(text = "Study Another Batch", style = MaterialTheme.typography.titleMedium)
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        OutlinedButton(
+            onClick = onTakeQuiz,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp)
+                .testTag("start_quiz_from_study_button"),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Icon(imageVector = Icons.Default.Quiz, contentDescription = null)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(text = "Take Interactive Quiz", style = MaterialTheme.typography.titleMedium)
         }
     }
 }

@@ -1,27 +1,36 @@
 package com.example.ui.viewmodel
 
 import android.app.Application
+import android.content.Context
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.data.model.QuizQuestion
+import com.example.data.model.QuizSessionState
+import com.example.data.model.QuizType
 import com.example.data.model.ReviewStateEntity
 import com.example.data.model.UserStatsEntity
 import com.example.data.model.WordEntity
 import com.example.data.model.WordWithReview
 import com.example.data.repository.VocabRepository
+import com.example.data.util.QuizGenerator
 import com.example.data.util.SM2Algorithm
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 sealed class ScreenTab(val route: String, val title: String) {
     object Study : ScreenTab("study", "Study")
+    object Quiz : ScreenTab("quiz", "Quiz")
     object Library : ScreenTab("library", "Library")
-    object Progress : ScreenTab("progress", "Progress")
     object Tutor : ScreenTab("tutor", "Word Tutor")
+    object Progress : ScreenTab("progress", "Progress")
 }
 
 data class StudySessionState(
@@ -60,8 +69,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _wordOfTheDay = MutableStateFlow<WordEntity?>(null)
     val wordOfTheDay: StateFlow<WordEntity?> = _wordOfTheDay.asStateFlow()
 
+    private val _quizState = MutableStateFlow(QuizSessionState())
+    val quizState: StateFlow<QuizSessionState> = _quizState.asStateFlow()
+
     val userStats: StateFlow<UserStatsEntity?> = repository.getUserStats()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), UserStatsEntity())
+
+    val dueReviewCount: StateFlow<Int> = repository.getDueCount()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+    val averageEaseFactor: StateFlow<Double> = repository.getAverageEaseFactor()
+        .map { it ?: 2.5 }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 2.5)
+
+    val upcomingReviews: StateFlow<List<ReviewStateEntity>> = repository.getUpcomingReviewSchedule()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val wordsWithReviews: StateFlow<List<WordWithReview>> = repository.getAllWordsWithReviews()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -183,6 +205,236 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun updateDailyGoal(newGoal: Int) {
         viewModelScope.launch {
             repository.updateDailyGoal(newGoal)
+        }
+    }
+
+    fun resetWordProgress(wordId: Long) {
+        viewModelScope.launch {
+            repository.resetWordProgress(wordId)
+        }
+    }
+
+    // ================= QUIZ FUNCTIONALITY =================
+
+    fun setQuizBookFilter(book: String) {
+        _quizState.value = _quizState.value.copy(selectedBookFilter = book)
+    }
+
+    fun setQuizType(type: QuizType) {
+        _quizState.value = _quizState.value.copy(selectedQuizType = type)
+    }
+
+    fun setQuizQuestionCount(count: Int) {
+        _quizState.value = _quizState.value.copy(questionCount = count)
+    }
+
+    fun startQuiz() {
+        val allWords = wordsWithReviews.value.map { it.word }
+        if (allWords.isEmpty()) return
+
+        val state = _quizState.value
+        val questions = QuizGenerator.generateQuiz(
+            allWords = allWords,
+            bookFilter = state.selectedBookFilter,
+            quizType = state.selectedQuizType,
+            questionCount = state.questionCount
+        )
+
+        _quizState.value = state.copy(
+            isConfiguring = false,
+            questions = questions,
+            currentIndex = 0,
+            isFinished = false,
+            score = 0,
+            streak = 0,
+            maxStreak = 0,
+            totalXpEarned = 0,
+            missedQuestions = emptyList()
+        )
+    }
+
+    fun answerQuizQuestion(selectedOptionIndex: Int) {
+        val state = _quizState.value
+        val currentQ = state.questions.getOrNull(state.currentIndex) ?: return
+        if (currentQ.isAnswered) return // Prevent multiple answers
+
+        val isCorrect = selectedOptionIndex == currentQ.correctIndex
+        val updatedQ = currentQ.copy(
+            selectedOptionIndex = selectedOptionIndex,
+            isAnswered = true,
+            isCorrect = isCorrect
+        )
+
+        val updatedQuestions = state.questions.toMutableList()
+        updatedQuestions[state.currentIndex] = updatedQ
+
+        val newStreak = if (isCorrect) state.streak + 1 else 0
+        val newMaxStreak = maxOf(state.maxStreak, newStreak)
+        val earnedXp = if (isCorrect) (20 + (newStreak * 2)) else 5 // Bonus for streaks
+        val newScore = if (isCorrect) state.score + 1 else state.score
+
+        val newMissed = if (!isCorrect) {
+            state.missedQuestions + updatedQ
+        } else {
+            state.missedQuestions
+        }
+
+        _quizState.value = state.copy(
+            questions = updatedQuestions,
+            score = newScore,
+            streak = newStreak,
+            maxStreak = newMaxStreak,
+            totalXpEarned = state.totalXpEarned + earnedXp,
+            missedQuestions = newMissed
+        )
+
+        // Award XP and update word SM2 mastery state based on quiz response
+        viewModelScope.launch {
+            val grade = if (isCorrect) {
+                if (newStreak >= 3) SM2Algorithm.ReviewGrade.EASY else SM2Algorithm.ReviewGrade.GOOD
+            } else {
+                SM2Algorithm.ReviewGrade.AGAIN
+            }
+            repository.processReviewGrade(currentQ.targetWord.id, grade)
+        }
+    }
+
+    fun nextQuizQuestion() {
+        val state = _quizState.value
+        val nextIdx = state.currentIndex + 1
+        if (nextIdx >= state.questions.size) {
+            _quizState.value = state.copy(isFinished = true)
+        } else {
+            _quizState.value = state.copy(currentIndex = nextIdx)
+        }
+    }
+
+    fun resetQuizConfig() {
+        _quizState.value = _quizState.value.copy(
+            isConfiguring = true,
+            isFinished = false,
+            currentIndex = 0,
+            questions = emptyList()
+        )
+    }
+
+    fun retakeMissedQuizQuestions() {
+        val state = _quizState.value
+        if (state.missedQuestions.isEmpty()) return
+
+        // Reset the missed questions to unattempted state
+        val resetQuestions = state.missedQuestions.mapIndexed { index, q ->
+            q.copy(
+                id = index + 1,
+                selectedOptionIndex = null,
+                isAnswered = false,
+                isCorrect = false
+            )
+        }
+
+        _quizState.value = state.copy(
+            isConfiguring = false,
+            questions = resetQuestions,
+            currentIndex = 0,
+            isFinished = false,
+            score = 0,
+            streak = 0,
+            maxStreak = 0,
+            totalXpEarned = 0,
+            missedQuestions = emptyList()
+        )
+    }
+
+    // ================= BACKUP & RESTORE FUNCTIONALITY =================
+
+    private val _localBackups = MutableStateFlow<List<com.example.data.util.BackupMetadata>>(emptyList())
+    val localBackups: StateFlow<List<com.example.data.util.BackupMetadata>> = _localBackups.asStateFlow()
+
+    private val _backupStatusMessage = MutableStateFlow<String?>(null)
+    val backupStatusMessage: StateFlow<String?> = _backupStatusMessage.asStateFlow()
+
+    fun clearBackupMessage() {
+        _backupStatusMessage.value = null
+    }
+
+    fun loadLocalBackups(context: Context) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val list = com.example.data.util.BackupManager.listLocalBackups(context)
+            _localBackups.value = list
+        }
+    }
+
+    fun createLocalBackup(context: Context, onComplete: ((Boolean, String) -> Unit)? = null) {
+        viewModelScope.launch {
+            try {
+                val json = repository.exportBackupJson()
+                val result = com.example.data.util.BackupManager.saveToLocalAppDirectory(context, json)
+                if (result.isSuccess) {
+                    val file = result.getOrThrow()
+                    loadLocalBackups(context)
+                    val msg = "Backup saved successfully (${file.name})"
+                    _backupStatusMessage.value = msg
+                    onComplete?.invoke(true, msg)
+                } else {
+                    val err = "Failed to create local backup: ${result.exceptionOrNull()?.message}"
+                    _backupStatusMessage.value = err
+                    onComplete?.invoke(false, err)
+                }
+            } catch (e: Exception) {
+                val err = "Backup error: ${e.message}"
+                _backupStatusMessage.value = err
+                onComplete?.invoke(false, err)
+            }
+        }
+    }
+
+    suspend fun getExportJson(): String {
+        return repository.exportBackupJson()
+    }
+
+    fun restoreFromJson(context: Context, jsonString: String, onComplete: ((Boolean, String) -> Unit)? = null) {
+        viewModelScope.launch {
+            val result = repository.restoreBackupFromJson(jsonString)
+            if (result.isSuccess) {
+                val data = result.getOrThrow()
+                loadLocalBackups(context)
+                val msg = "Restored ${data.reviewStates.size} SM-2 words and ${data.stats.xpTotal} XP successfully!"
+                _backupStatusMessage.value = msg
+                onComplete?.invoke(true, msg)
+            } else {
+                val err = "Restore failed: ${result.exceptionOrNull()?.message}"
+                _backupStatusMessage.value = err
+                onComplete?.invoke(false, err)
+            }
+        }
+    }
+
+    fun restoreFromLocalBackupFile(context: Context, filePath: String, onComplete: ((Boolean, String) -> Unit)? = null) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val file = java.io.File(filePath)
+                if (!file.exists()) {
+                    withContext(Dispatchers.Main) {
+                        onComplete?.invoke(false, "Backup file not found")
+                    }
+                    return@launch
+                }
+                val content = file.readText()
+                withContext(Dispatchers.Main) {
+                    restoreFromJson(context, content, onComplete)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    onComplete?.invoke(false, "Error reading backup file: ${e.message}")
+                }
+            }
+        }
+    }
+
+    fun deleteLocalBackupFile(context: Context, filePath: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            com.example.data.util.BackupManager.deleteLocalBackup(filePath)
+            loadLocalBackups(context)
         }
     }
 }

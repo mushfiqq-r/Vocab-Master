@@ -21,6 +21,13 @@ val StatusLearning = Color(0xFFFB8C00)    // Amber Orange
 val StatusMastered = Color(0xFF43A047)    // Emerald Green
 val StatusDanger = Color(0xFFE53935)      // Crimson Red
 
+// Semantic Quiz & Feedback Tokens
+val EmeraldSuccess = Color(0xFF2E7D32)
+val EmeraldDark = Color(0xFF1B5E20)
+val EmeraldLight = Color(0xFFE8F5E9)
+val CoralRed = Color(0xFFD32F2F)
+val CoralLight = Color(0xFFFFEBEE)
+
 // Light Theme Tokens
 val LightBackground = Color(0xFFF8F9FE)
 val LightSurface = Color(0xFFFFFFFF)

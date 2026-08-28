@@ -35,6 +35,8 @@ import java.util.Locale
 @Composable
 fun WordDetailBottomSheet(
     word: WordEntity?,
+    reviewState: com.example.data.model.ReviewStateEntity? = null,
+    onResetProgress: (() -> Unit)? = null,
     onDismiss: () -> Unit
 ) {
     if (word == null) return
@@ -144,6 +146,89 @@ fun WordDetailBottomSheet(
                     else -> "Tier 3: Advanced"
                 }
                 BadgeChip(label = tierLabel, color = MaterialTheme.colorScheme.outline)
+            }
+
+            // SM-2 Spaced Repetition Meta Card
+            if (reviewState != null) {
+                Spacer(modifier = Modifier.height(14.dp))
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "SM-2 Repetition Status",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            val statusColor = when (reviewState.status) {
+                                "mastered" -> StatusMastered
+                                "learning" -> StatusLearning
+                                else -> StatusNew
+                            }
+                            Text(
+                                text = reviewState.status.uppercase(),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = statusColor
+                            )
+                        }
+
+                        val formattedEase = String.format(Locale.US, "%.2f", reviewState.easeFactor)
+                        val daysUntil = ((reviewState.nextReviewDate - System.currentTimeMillis()) / (1000 * 60 * 60 * 24)).coerceAtLeast(0)
+                        val dueText = if (reviewState.nextReviewDate <= System.currentTimeMillis() || reviewState.status == "new") "Due for review now" else "Next review in $daysUntil day(s)"
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "Easiness Factor: $formattedEase",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = "Interval: ${reviewState.intervalDays}d (${reviewState.repetitions} reps)",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = dueText,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = if (dueText.contains("now")) StatusLearning else MaterialTheme.colorScheme.onSurface
+                            )
+
+                            if (onResetProgress != null && reviewState.status != "new") {
+                                TextButton(
+                                    onClick = onResetProgress,
+                                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
+                                ) {
+                                    Text("Reset Progress", style = MaterialTheme.typography.labelSmall)
+                                }
+                            }
+                        }
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))

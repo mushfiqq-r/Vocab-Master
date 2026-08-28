@@ -42,14 +42,32 @@ interface ReviewDao {
     @Query("SELECT * FROM review_states WHERE nextReviewDate <= :timestamp OR status = 'new'")
     suspend fun getDueReviewStates(timestamp: Long): List<ReviewStateEntity>
 
+    @Query("SELECT COUNT(*) FROM review_states WHERE nextReviewDate <= :timestamp OR status = 'new'")
+    fun getDueReviewCount(timestamp: Long): Flow<Int>
+
+    @Query("SELECT AVG(easeFactor) FROM review_states WHERE status != 'new'")
+    fun getAverageEaseFactor(): Flow<Double?>
+
+    @Query("SELECT * FROM review_states ORDER BY nextReviewDate ASC LIMIT :limit")
+    fun getUpcomingReviewSchedule(limit: Int): Flow<List<ReviewStateEntity>>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertOrUpdate(reviewState: ReviewStateEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertOrUpdateAll(reviewStates: List<ReviewStateEntity>)
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertAll(reviewStates: List<ReviewStateEntity>)
 
+    @Query("SELECT * FROM review_states")
+    suspend fun getAllReviewStatesDirect(): List<ReviewStateEntity>
+
     @Query("SELECT COUNT(*) FROM review_states WHERE status = :status")
     fun countByStatus(status: String): Flow<Int>
+
+    @Query("UPDATE review_states SET easeFactor = 2.5, intervalDays = 0, repetitions = 0, nextReviewDate = :timestamp, lastReviewedDate = 0, status = 'new' WHERE wordId = :wordId")
+    suspend fun resetWordProgress(wordId: Long, timestamp: Long)
 }
 
 @Dao

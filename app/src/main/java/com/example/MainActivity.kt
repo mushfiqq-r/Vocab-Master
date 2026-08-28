@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import com.example.ui.components.WordDetailBottomSheet
 import com.example.ui.screens.LibraryScreen
 import com.example.ui.screens.ProgressScreen
+import com.example.ui.screens.QuizScreen
 import com.example.ui.screens.StudyScreen
 import com.example.ui.screens.TutorScreen
 import com.example.ui.theme.AmberAccent
@@ -44,6 +45,10 @@ class MainActivity : ComponentActivity() {
                 val currentTab by viewModel.currentTab.collectAsState()
                 val selectedWord by viewModel.selectedWordDetail.collectAsState()
                 val stats by viewModel.userStats.collectAsState()
+                val wordsWithReviews by viewModel.wordsWithReviews.collectAsState()
+                val selectedWordReview = remember(selectedWord, wordsWithReviews) {
+                    selectedWord?.let { w -> wordsWithReviews.find { it.word.id == w.id }?.review }
+                }
 
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
@@ -117,6 +122,19 @@ class MainActivity : ComponentActivity() {
                             )
 
                             NavigationBarItem(
+                                selected = currentTab == ScreenTab.Quiz,
+                                onClick = { viewModel.setTab(ScreenTab.Quiz) },
+                                icon = {
+                                    Icon(
+                                        imageVector = Icons.Default.Quiz,
+                                        contentDescription = "Interactive Quiz"
+                                    )
+                                },
+                                label = { Text("Quiz") },
+                                modifier = Modifier.testTag("nav_quiz")
+                            )
+
+                            NavigationBarItem(
                                 selected = currentTab == ScreenTab.Library,
                                 onClick = { viewModel.setTab(ScreenTab.Library) },
                                 icon = {
@@ -172,6 +190,10 @@ class MainActivity : ComponentActivity() {
                                     viewModel = viewModel,
                                     onViewDetail = { viewModel.selectWordDetail(it) }
                                 )
+                                ScreenTab.Quiz -> QuizScreen(
+                                    viewModel = viewModel,
+                                    onViewWordDetail = { viewModel.selectWordDetail(it) }
+                                )
                                 ScreenTab.Library -> LibraryScreen(
                                     viewModel = viewModel,
                                     onWordClick = { viewModel.selectWordDetail(it) }
@@ -190,6 +212,10 @@ class MainActivity : ComponentActivity() {
                         // Word Detail BottomSheet Modal
                         WordDetailBottomSheet(
                             word = selectedWord,
+                            reviewState = selectedWordReview,
+                            onResetProgress = {
+                                selectedWord?.let { viewModel.resetWordProgress(it.id) }
+                            },
                             onDismiss = { viewModel.selectWordDetail(null) }
                         )
                     }
