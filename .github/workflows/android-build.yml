@@ -1,0 +1,73 @@
+name: Android CI — Build APK
+
+on:
+  push:
+    branches: [ main, master, ci/fix-android-build ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      ANDROID_API_LEVEL: 33
+      BUILD_TOOLS_VERSION: "33.0.2"
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        distribution: temurin
+        java-version: '17'
+
+    - name: Cache Gradle
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+        key: ${{ runner.os }}-gradle-${{ hashFiles('**/gradle/wrapper/gradle-wrapper.properties','**/*.gradle*') }}
+        restore-keys: |
+          ${{ runner.os }}-gradle-
+
+    - name: Set up Android SDK (platforms and build-tools)
+      uses: r0adkll/setup-android@v2
+      with:
+        api-level: ${{ env.ANDROID_API_LEVEL }}
+        build-tools: ${{ env.BUILD_TOOLS_VERSION }}
+
+    - name: Ensure cmdline-tools and accept licenses
+      run: |
+        set -e
+        SDKCMD="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
+        if [ ! -x "$SDKCMD" ]; then
+          SDKCMD="$ANDROID_SDK_ROOT/cmdline-tools/bin/sdkmanager" || true
+        fi
+        echo "Using sdkmanager: $SDKCMD"
+        yes | "$SDKCMD" --licenses || true
+        "$SDKCMD" "platforms;android-${{ env.ANDROID_API_LEVEL }}" "build-tools;${{ env.BUILD_TOOLS_VERSION }}" || true
+      env:
+        ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
+
+    - name: Make gradlew executable
+      run: chmod +x ./gradlew
+
+    - name: Build debug APK (capture log)
+      run: |
+        ./gradlew clean assembleDebug --no-daemon --stacktrace --info | tee build.log
+
+    - name: Upload Gradle log
+      uses: actions/upload-artifact@v4
+      with:
+        name: gradle-build-log
+        path: build.log
+
+    - name: Upload APK artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: app-debug-apk
+        path: app/build/outputs/apk/debug/*.apk
